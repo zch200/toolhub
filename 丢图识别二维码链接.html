@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>二维码识别工具</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .drop-zone {
+            transition: all 0.3s ease;
+            border: 2px dashed #cbd5e1;
+        }
+        .drop-zone.active {
+            border-color: #3b82f6;
+            background-color: #f0f7ff;
+        }
+        .result-box {
+            transition: all 0.4s ease;
+            max-height: 0;
+            overflow: hidden;
+        }
+        .result-box.active {
+            max-height: 200px;
+        }
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-3xl bg-white rounded-xl shadow-lg overflow-hidden">
+        <!-- 顶部标题栏 -->
+        <div class="bg-gradient-to-r from-blue-600 to-indigo-700 p-6 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold flex items-center">
+                        <i class="fas fa-qrcode mr-3"></i>
+                        二维码识别工具
+                    </h1>
+                    <p class="text-blue-100 mt-1">上传图片自动识别二维码内容</p>
+                </div>
+                <div class="bg-white/20 p-3 rounded-lg">
+                    <i class="fas fa-camera text-2xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 主内容区 -->
+        <div class="p-6">
+            <!-- 上传区域 -->
+            <div class="drop-zone rounded-xl p-8 text-center cursor-pointer mb-8 relative"
+                 id="dropZone">
+                <input type="file" id="fileInput" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept="image/*">
+                <div class="flex flex-col items-center justify-center">
+                    <div class="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mb-4">
+                        <i class="fas fa-cloud-upload-alt text-blue-500 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-2">拖放图片到这里</h3>
+                    <p class="text-gray-500 mb-4">支持 JPG, PNG 格式的图片文件</p>
+                    <button class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition duration-200">
+                        <i class="fas fa-folder-open mr-2"></i>选择图片
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 预览区域 -->
+            <div class="mb-8">
+                <h3 class="text-lg font-medium text-gray-800 mb-3 flex items-center">
+                    <i class="fas fa-image text-blue-500 mr-2"></i>图片预览
+                </h3>
+                <div class="border rounded-lg p-4 flex justify-center">
+                    <img id="imagePreview" class="max-h-64 max-w-full rounded object-contain hidden" alt="预览图">
+                    <div id="previewPlaceholder" class="text-gray-400 py-12">
+                        图片预览区域
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 识别状态 -->
+            <div id="status" class="hidden mb-8">
+                <div class="flex items-center justify-center py-4">
+                    <div class="spinner w-6 h-6 border-t-2 border-blue-600 rounded-full mr-3"></div>
+                    <span class="text-gray-700">正在识别二维码...</span>
+                </div>
+            </div>
+            
+            <!-- 结果区域 -->
+            <div id="resultBox" class="result-box bg-gray-50 rounded-lg overflow-hidden">
+                <div class="p-5">
+                    <h3 class="text-lg font-medium text-gray-800 mb-3 flex items-center">
+                        <i class="fas fa-check-circle text-green-500 mr-2"></i>识别结果
+                    </h3>
+                    <div class="bg-white rounded-lg border p-4">
+                        <div class="flex items-start">
+                            <div class="mr-3 mt-1 text-blue-500">
+                                <i class="fas fa-link"></i>
+                            </div>
+                            <div class="overflow-hidden">
+                                <p id="resultContent" class="text-gray-800 font-medium truncate">https://example.com/qr-code-demo-link</p>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex">
+                            <a id="visitLink" href="#" target="_blank" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center mr-3">
+                                <i class="fas fa-external-link-alt mr-2"></i>访问链接
+                            </a>
+                            <button id="copyBtn" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg flex items-center">
+                                <i class="fas fa-copy mr-2"></i>复制
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 使用说明 -->
+            <div class="mt-8 pt-6 border-t border-gray-100">
+                <h3 class="text-lg font-medium text-gray-800 mb-3 flex items-center">
+                    <i class="fas fa-info-circle text-indigo-500 mr-2"></i>使用说明
+                </h3>
+                <ul class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <li class="flex items-start p-3 bg-gray-50 rounded-lg">
+                        <div class="mr-3 mt-1 text-blue-500">
+                            <i class="fas fa-1"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-medium">选择图片</h4>
+                            <p class="text-gray-600 text-sm mt-1">点击按钮或拖放图片到上传区域</p>
+                        </div>
+                    </li>
+                    <li class="flex items-start p-3 bg-gray-50 rounded-lg">
+                        <div class="mr-3 mt-1 text-blue-500">
+                            <i class="fas fa-2"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-medium">自动识别</h4>
+                            <p class="text-gray-600 text-sm mt-1">系统自动检测并识别图片中的二维码</p>
+                        </div>
+                    </li>
+                    <li class="flex items-start p-3 bg-gray-50 rounded-lg">
+                        <div class="mr-3 mt-1 text-blue-500">
+                            <i class="fas fa-3"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-medium">获取结果</h4>
+                            <p class="text-gray-600 text-sm mt-1">解析结果将以链接形式展示</p>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- 页脚 -->
+        <div class="bg-gray-50 px-6 py-4 text-center text-gray-500 text-sm border-t">
+            <p>© 2023 二维码识别工具 | 快速、准确的二维码解析服务</p>
+        </div>
+    </div>
+
+    <!-- 引入jsQR库 -->
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('fileInput');
+            const imagePreview = document.getElementById('imagePreview');
+            const previewPlaceholder = document.getElementById('previewPlaceholder');
+            const statusElement = document.getElementById('status');
+            const resultBox = document.getElementById('resultBox');
+            const resultContent = document.getElementById('resultContent');
+            const visitLink = document.getElementById('visitLink');
+            const copyBtn = document.getElementById('copyBtn');
+            
+            // 点击整个区域触发文件选择
+            dropZone.addEventListener('click', (e) => {
+                if (e.target !== fileInput) {
+                    fileInput.click();
+                }
+            });
+            
+            // 文件选择变化
+            fileInput.addEventListener('change', handleFileSelect);
+            
+            // 拖放事件
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => {
+                    dropZone.classList.add('active');
+                }, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => {
+                    dropZone.classList.remove('active');
+                }, false);
+            });
+            
+            // 处理文件拖放
+            dropZone.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                if (files.length) {
+                    fileInput.files = files;
+                    handleFileSelect();
+                }
+            });
+            
+            // 处理文件选择
+            function handleFileSelect() {
+                const file = fileInput.files[0];
+                if (file) {
+                    // 验证文件类型
+                    if (!file.type.match('image.*')) {
+                        alert('请选择图片文件（JPG/PNG）');
+                        return;
+                    }
+                    
+                    // 显示预览
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        imagePreview.src = e.target.result;
+                        imagePreview.classList.remove('hidden');
+                        previewPlaceholder.classList.add('hidden');
+                        
+                        // 开始识别
+                        processImageForQR(e.target.result);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+            
+            // 处理二维码识别
+            function processImageForQR(imageData) {
+                // 显示加载状态
+                statusElement.classList.remove('hidden');
+                resultBox.classList.remove('active');
+                
+                // 使用setTimeout让UI有机会更新
+                setTimeout(() => {
+                    const img = new Image();
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        
+                        // 设置canvas尺寸
+                        const maxSize = 800;
+                        let width = img.width;
+                        let height = img.height;
+                        
+                        if (width > maxSize || height > maxSize) {
+                            const ratio = Math.min(maxSize / width, maxSize / height);
+                            width = Math.floor(width * ratio);
+                            height = Math.floor(height * ratio);
+                        }
+                        
+                        canvas.width = width;
+                        canvas.height = height;
+                        
+                        // 绘制图像
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        // 获取图像数据
+                        const imageData = ctx.getImageData(0, 0, width, height);
+                        
+                        // 使用jsQR识别二维码
+                        const code = jsQR(imageData.data, imageData.width, imageData.height);
+                        
+                        // 处理结果
+                        if (code) {
+                            showResult(code.data);
+                        } else {
+                            showError('未检测到二维码');
+                        }
+                    };
+                    img.src = imageData;
+                }, 300);
+            }
+            
+            // 显示结果
+            function showResult(data) {
+                statusElement.classList.add('hidden');
+                
+                // 验证是否是URL
+                let url = data;
+                try {
+                    if (!/^https?:\/\//i.test(data)) {
+                        url = 'http://' + data;
+                    }
+                    new URL(url);
+                } catch (e) {
+                    // 不是有效URL，显示原始文本
+                    resultContent.textContent = data;
+                    visitLink.classList.add('hidden');
+                    copyBtn.onclick = () => {
+                        copyToClipboard(data);
+                        alert('已复制到剪贴板');
+                    };
+                    resultBox.classList.add('active');
+                    return;
+                }
+                
+                // 是有效URL
+                resultContent.textContent = data;
+                visitLink.href = url;
+                visitLink.classList.remove('hidden');
+                
+                copyBtn.onclick = () => {
+                    copyToClipboard(data);
+                    alert('已复制到剪贴板');
+                };
+                
+                resultBox.classList.add('active');
+            }
+            
+            // 显示错误
+            function showError(message) {
+                statusElement.classList.add('hidden');
+                resultBox.classList.remove('active');
+                
+                alert(message);
+            }
+            
+            // 复制到剪贴板
+            function copyToClipboard(text) {
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+            }
+            
+            // 初始示例二维码识别
+            setTimeout(() => {
+                const sampleImage = document.createElement('img');
+                sampleImage.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = sampleImage.width;
+                    canvas.height = sampleImage.height;
+                    ctx.drawImage(sampleImage, 0, 0);
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const code = jsQR(imageData.data, imageData.width, imageData.height);
+                    if (code) {
+                        showResult(code.data);
+                    }
+                };
+                sampleImage.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZmZmIi8+PGRlZnM+PHBhdHRlcm4gaWQ9InFyIiB3aWR0aD0iNyIgaGVpZ2h0PSI3IiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDAgMCBMIDcgMCBMIDcgNyBMIDAgNyB6IE0gMSAxIEwgNiAxIEwgNiA2IEwgMSA2IHoiIGZpbGw9IiMwMDAiLz48cGF0aCBkPSJNIDIgMiBMIDUgMiBMIDUgNSBMIDIgNSB6IiBmaWxsPSIjZmZmIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI3FyKSIvPjx0ZXh0IHg9IjIwIiB5PSIxMDAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMCIgZmlsbD0iIzAwMCI+UXJDb2RlIERlbW88L3RleHQ+PC9zdmc+';
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
